@@ -9,274 +9,233 @@ def isPHPScalarTypesEnabled():
 	return isEnabled or re.match('<\?php\s+declare\(strict_types=[01]\);', '\n'.join(vim.current.window.buffer))
 endglobal
 
-## Snippets from SnipMate, taken from
-## https://github.com/scrooloose/snipmate-snippets.git
+global !p
+import json
 
-snippet gm "PHP Class Getter" b
+def getNamespace():
+	def findComposerFilename():
+		prev, test = None, os.path.abspath(path)
+		while prev != test:
+			if os.path.isfile(os.path.join(test, 'composer.json')):
+				return test + '/composer.json'
+			prev, test = test, os.path.abspath(os.path.join(test, os.pardir))
+		return None
+
+	def getAutoloadConfig():
+		filename = findComposerFilename();
+		config = {};
+		if filename:
+			composerJson = json.load(open(findComposerFilename()))
+			if 'autoload' in composerJson and 'psr-4' in composerJson['autoload']:
+				config.update(composerJson['autoload']['psr-4'])
+			if 'autoload-dev' in composerJson and 'psr-4' in composerJson['autoload']:
+				config.update(composerJson['autoload-dev']['psr-4'])
+		return config
+
+	def findAutoloadNamespace(index, autoloadConfig):
+		if index in list(autoloadConfig.values()):
+			return list(autoloadConfig.keys())[list(autoloadConfig.values()).index(index)]
+		return None
+
+	parts = os.path.relpath(path).split('/')
+	parts.pop() #get rid of filename
+	unused = []
+	autoloadConfig = getAutoloadConfig()
+	if not autoloadConfig:
+		relpath = os.path.relpath(path)
+		m = re.search(r'[A-Z].+(?=/)', relpath)
+		return m.group().replace('/', '\\') if m else '';
+	while parts:
+		if findAutoloadNamespace('/'.join(parts), autoloadConfig):
+			return findAutoloadNamespace('/'.join(parts), autoloadConfig) + '\\'.join(unused)
+		if findAutoloadNamespace('/'.join(parts) + '/', autoloadConfig):
+			return findAutoloadNamespace('/'.join(parts) + '/', autoloadConfig) + '\\'.join(unused)
+		unused.insert(0, parts.pop())
+
+	return '\\'.join(unused)
+
+endglobal
+
+snippet gm "PHP Class Getter" bm
 /**
- * Getter for $1
- *
  * @return ${2:string}
  */
 public function get${1/\w+\s*/\u$0/}()`!p snip.rv = ': '+t[2] if isPHPScalarTypesEnabled() else ''`
 {
     return $this->$1;
-}
+}$0
 endsnippet
 
-snippet sm "PHP Class Setter" b
+snippet sm "PHP Class Setter" bm
 /**
- * Setter for $1
- *
  * @param ${2:string} $$1
- * @return ${3:`!p snip.rv=snip.basename`}
+ * @return `!p snip.rv=snip.basename`
  */
-public function set${1/\w+\s*/\u$0/}(${4:${2/(void|string|int|integer|double|float|object|boolear|null|mixed|number|resource)|(.*)/(?1::$2 )/}}$$1)
+public function set${1/\w+\s*/\u$0/}(${2/(mixed)|(.*)/(?1::$2 )/}$$1)`!p snip.rv = ': '+snip.basename if isPHPScalarTypesEnabled() else ''`
 {
     $this->$1 = $$1;
-
-    ${5:return $this;}
-}
+    return $this;
+}$0
 endsnippet
 
-snippet gs "PHP Class Getter Setter" b
+snippet gs "PHP Class Getter Setter" bm
 /**
- * Getter for $1
- *
- * @return ${2:string}
- */
+* @return ${2:string}
+*/
 public function get${1/\w+\s*/\u$0/}()`!p snip.rv = ': '+t[2] if isPHPScalarTypesEnabled() else ''`
 {
-    return $this->$1;
+	return $this->$1;
 }
 
 /**
- * Setter for $1
- *
  * @param $2 $$1
- * @return ${3:`!p snip.rv=snip.basename`}
+ * @return `!p snip.rv=snip.basename`
  */
-public function set${1/\w+\s*/\u$0/}(${4:${2/(void|string|int|integer|double|float|object|boolear|null|mixed|number|resource)|(.*)/(?1::$2 )/}}$$1)
+public function set${1/\w+\s*/\u$0/}(${2/(mixed)|(.*)/(?1::$2 )/}$$1)`!p snip.rv = ': '+snip.basename if isPHPScalarTypesEnabled() else ''`
 {
-    $this->$1 = $$1;
-
-    ${5:return $this;}
-}
+	$this->$1 = $$1;
+	return $this;
+}$0
 endsnippet
 
-snippet pub "Public function" b
+snippet pub "Public function" bm
 /**
- * ${3:undocumented function}
- *
- * @return ${4:void}
+ * @param ${2/, /\n     * \@param /g}
+ * @return ${3:void}
  */
-public function ${1:name}(${2:$param})
+public function ${1}(${2:$params})`!p snip.rv = ': '+t[3] if isPHPScalarTypesEnabled() else ''`
 {
-	${VISUAL}${5:return null;}
+	${VISUAL}$0
 }
-$0
 endsnippet
 
-snippet pro "Protected function" b
+snippet pro "Protected function" bm
 /**
- * ${3:undocumented function}
- *
- * @return ${4:void}
+ * @param ${2/, /\n     * \@param /g}
+ * @return ${3:void}
  */
-protected function ${1:name}(${2:$param})
+protected function ${1}(${2:$params})`!p snip.rv = ': '+t[3] if isPHPScalarTypesEnabled() else ''`
 {
-	${VISUAL}${5:return null;}
+	${VISUAL}$0
 }
-$0
 endsnippet
 
-snippet pri "Private function" b
+snippet pri "Private function" bm
 /**
- * ${3:undocumented function}
- *
- * @return ${4:void}
+ * @param ${2/, /\n     * \@param /g}
+ * @return ${3:void}
  */
-private function ${1:name}(${2:$param})
+private function ${1}(${2:$params})`!p snip.rv = ': '+t[3] if isPHPScalarTypesEnabled() else ''`
 {
-	${VISUAL}${5:return null;}
+	${VISUAL}$0
 }
-$0
 endsnippet
 
-snippet pubs "Public static function" b
+snippet pubs "Public static function" bm
 /**
- * ${3:undocumented function}
- *
- * @return ${4:void}
+ * @param ${2/, /\n     * \@param /g}
+ * @return ${3:void}
  */
-public static function ${1:name}(${2:$param})
+public static function ${1}(${2:$params})`!p snip.rv = ': '+t[3] if isPHPScalarTypesEnabled() else ''`
 {
-	${VISUAL}${5:return null;}
+	${VISUAL}$0
 }
-$0
 endsnippet
 
-snippet pros "Protected static function" b
+snippet pros "Protected static function" bm
 /**
- * ${3:undocumented function}
- *
- * @return ${4:void}
+ * @param ${2/, /\n     * \@param /g}
+ * @return ${3:void}
  */
-protected static function ${1:name}(${2:$param})
+protected static function ${1}(${2:$params})`!p snip.rv = ': '+t[3] if isPHPScalarTypesEnabled() else ''`
 {
-	${VISUAL}${5:return null;}
+	${VISUAL}$0
 }
-$0
 endsnippet
 
-snippet pris "Private static function" b
+snippet pris "Private static function" bm
 /**
- * ${3:undocumented function}
- *
- * @return ${4:void}
+ * @param ${2/, /\n     * \@param /g}
+ * @return ${3:void}
  */
-private static function ${1:name}(${2:$param})
+private static function ${1}(${2:$params})`!p snip.rv = ': '+t[3] if isPHPScalarTypesEnabled() else ''`
 {
-	${VISUAL}${5:return null;}
+	${VISUAL}$0
 }
-$0
 endsnippet
 
-snippet fu "Function snip" b
-function ${1:name}(${2:$param})
-{
-	${VISUAL}${3:return null;}
-}
-$0
-endsnippet
-
-snippet new "New class instance" b
-$${1:variableName} = new ${2:${1/\w+\s*/\u$0/}}($3);
-$0
-endsnippet
-
-snippet ns "namespace declaration" b
-namespace ${1:`!p
-relpath = os.path.relpath(path)
-m = re.search(r'[A-Z].+(?=/)', relpath)
-if m:
-	snip.rv = m.group().replace('/', '\\')
-`};
-endsnippet
-
-snippet class "Class declaration template" b
-<?php
-
-namespace ${1:`!p
-relpath = os.path.relpath(path)
-m = re.search(r'[A-Z].+(?=/)', relpath)
-if m:
-	snip.rv = m.group().replace('/', '\\')
-`};
-
+snippet con "Constructor function" bm
 /**
- * Class ${1:`!p snip.rv=snip.basename`}
- * @author ${2:`!v g:snips_author`}
- */
-class $1
-{
-}
-endsnippet
-
-snippet interface "Interface declaration template" b
-<?php
-
-namespace ${1:`!p
-relpath = os.path.relpath(path)
-m = re.search(r'[A-Z].+(?=/)', relpath)
-if m:
-	snip.rv = m.group().replace('/', '\\')
-`};
-
-/**
- * Interface ${1:`!p snip.rv=snip.basename`}
- * @author ${2:`!v g:snips_author`}
- */
-interface $1
-{
-	public function ${3:someFunction}();$4
-}
-endsnippet
-
-snippet trait "Trait declaration template" b
-<?php
-
-namespace ${1:`!p
-relpath = os.path.relpath(path)
-m = re.search(r'[A-Z].+(?=/)', relpath)
-if m:
-	snip.rv = m.group().replace('/', '\\')
-`};
-
-/**
- * Trait ${1:`!p snip.rv=snip.basename`}
- * @author ${2:`!v g:snips_author`}
- */
-trait $1
-{
-}
-endsnippet
-
-snippet construct "__construct()" b
-/**
- * @param$2 ${1/, /\n     * \@param /g}
+ * @param ${1/, /\n     * \@param /g}
  */
 public function __construct(${1:$dependencies})
 {${1/\w* ?\$(\w+)(, )*/\n        $this->$1 = $$1;/g}
+}$0
+endsnippet
+
+snippet fu "Function" bm
+/**
+ * @param ${2/, /\n     * \@param /g}
+ * @return ${3:void}
+ */
+function ${1}(${2:$params})`!p snip.rv = ': '+t[3] if isPHPScalarTypesEnabled() else ''`
+{
+	${VISUAL}$0
 }
-$0
+endsnippet
+
+snippet new "New class instance" bm
+$${1:variableName} = new ${2:${1/\w+\s*/\u$0/}}($3);$0
+endsnippet
+
+snippet ns "namespace declaration" bm
+namespace `!p snip.rv = getNamespace()`;$0
+endsnippet
+
+snippet class "Class declaration template" bm
+<?php
+
+namespace `!p snip.rv = getNamespace()`;
+
+class `!p snip.rv=snip.basename`
+{
+	$0
+}
+endsnippet
+
+snippet interface "Interface declaration template" bm
+<?php
+
+namespace `!p snip.rv = getNamespace()`;
+
+interface `!p snip.rv=snip.basename`
+{
+	$0
+}
+endsnippet
+
+snippet trait "Trait declaration template" bm
+<?php
+
+namespace `!p snip.rv = getNamespace()`;
+
+trait `!p snip.rv=snip.basename`
+{
+	$0
+}
 endsnippet
 
 # PHPUnit snippets
-snippet testcase "class XYZTest extends \PHPUnit_Framework_TestCase { ... }"
+snippet testcase "TestCase class declaration" bm
 <?php
 
-namespace `!p
-relpath = os.path.relpath(path)
-m = re.search(r'[A-Z].+(?=/)', relpath)
-if m:
-	snip.rv = m.group().replace('/', '\\')
-`;
-
-/**
- * @author `!v g:snips_author`
- */
-class `!p
-snip.rv = re.match(r'.*(?=\.)', fn).group()
-` extends \PHPUnit_Framework_TestCase
-{
-	public function test$1()
-	{
-		${0:${VISUAL}}
-	}
-}
-endsnippet
-
-snippet testcase6 "class XYZTest extends TestCase { ... }"
-<?php
-
-namespace `!p
-relpath = os.path.relpath(path)
-m = re.search(r'[A-Z].+(?=/)', relpath)
-if m:
-	snip.rv = m.group().replace('/', '\\')
-`;
+namespace ${1:`!p snip.rv = getNamespace()`};
 
 use PHPUnit\Framework\TestCase;
 
-/**
- * @author `!v g:snips_author`
- */
-class `!p
-snip.rv = re.match(r'.*(?=\.)', fn).group()
-` extends TestCase
+class `!p snip.rv = re.match(r'.*(?=\.)', fn).group()` extends TestCase
 {
-	public function test$1()
+	public function test${2}()
 	{
 		${0:${VISUAL}}
 	}
